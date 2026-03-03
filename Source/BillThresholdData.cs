@@ -5,6 +5,7 @@ namespace IngredientThreshold
     public class BillThresholdData
     {
         public ThingDef ingredient;
-        public int threshold = 100;
+        public int threshold = 128;
+        public bool suspendOnDrop = false;
     }
 }

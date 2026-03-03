@@ -16,6 +16,7 @@ namespace IngredientThreshold.Patches
             var data = extraData.GetOrCreateValue(__instance);
             Scribe_Defs.Look(ref data.ingredient, "threshold_ingredient");
             Scribe_Values.Look(ref data.threshold, "threshold_amount", 100);
+            Scribe_Values.Look(ref data.suspendOnDrop, "suspend_on_drop", false);
         }
     }
 }

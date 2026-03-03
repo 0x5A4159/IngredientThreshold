@@ -13,6 +13,7 @@ namespace IngredientThreshold.Patches
         {
             var options = new List<FloatMenuOption>
             {
+                // I should probably look into a better solution than hard-setting the list, this probably causes compat issues with other qol crafting billrepeatmodes
                 new FloatMenuOption(BillRepeatModeDefOf.RepeatCount.LabelCap,
                     () => bill.repeatMode = BillRepeatModeDefOf.RepeatCount),
                 new FloatMenuOption(BillRepeatModeDefOf.TargetCount.LabelCap,
@@ -92,6 +93,8 @@ namespace IngredientThreshold.Patches
             string buf = _buffers[id];
             Widgets.TextFieldNumeric(numField, ref data.threshold, ref buf, 0f, 9_999_999f);
             _buffers[id] = buf;
+
+            listing.CheckboxLabeled("Suspend bill when ingredient drops below threshold", ref data.suspendOnDrop);
         }
     }
 
