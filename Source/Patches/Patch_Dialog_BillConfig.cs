@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using HarmonyLib;
 using RimWorld;
 using UnityEngine;
@@ -63,26 +64,32 @@ namespace IngredientThreshold.Patches
 
             string ingLabel = data.ingredient != null ? $"If {data.ingredient.LabelCap} >" : "(select ingredient)";
 
+            // Iterate all allowed ingredients for bill (sorts results)
             if (Widgets.ButtonText(ingBtn, ingLabel))
             {
                 var opts = new List<FloatMenuOption>();
-                if (bill.ingredientFilter != null)
+                if (bill.recipe?.ingredients != null)
                 {
-                    foreach (var def in bill.ingredientFilter.AllowedThingDefs)
+                    foreach (var ingredientCount in bill.recipe.ingredients)
                     {
-                        var captured = def;
-                        opts.Add(new FloatMenuOption(def.LabelCap, () =>
+                        foreach (var def in ingredientCount.filter.AllowedThingDefs)
                         {
-                            data.ingredient = captured;
-                            _buffers.Remove(bill.GetUniqueLoadID());
-                        }));
+                            if (bill.ingredientFilter != null && !bill.ingredientFilter.Allows(def))
+                                continue;
+                            var captured = def;
+                            opts.Add(new FloatMenuOption(def.LabelCap, () =>
+                            {
+                                data.ingredient = captured;
+                                _buffers.Remove(bill.GetUniqueLoadID());
+                            }));
+                        }
                     }
                 }
 
                 if (opts.Count > 0)
-                    Find.WindowStack.Add(new FloatMenu(opts));
+                    Find.WindowStack.Add(new FloatMenu(opts.OrderBy(o => o.Label).ToList()));
                 else
-                    Messages.Message("Configure the bill's ingredient filter first.",
+                    Messages.Message("This recipe has no configurable ingredients.",
                         MessageTypeDefOf.RejectInput, false);
             }
 
@@ -93,6 +100,55 @@ namespace IngredientThreshold.Patches
             string buf = _buffers[id];
             Widgets.TextFieldNumeric(numField, ref data.threshold, ref buf, 0f, 9_999_999f);
             _buffers[id] = buf;
+
+            listing.CheckboxLabeled("Enable product limit", ref data.productLimitEnabled);
+
+            if (data.productLimitEnabled)
+            {
+                Rect row2 = listing.GetRect(30f);
+                Rect prodBtn = new Rect(row2.x, row2.y, halfW, row2.height);
+                Rect prodField = new Rect(row2.x + halfW + 8f, row2.y, halfW, row2.height);
+
+                string prodLabel = data.productDef != null ? $"AND {data.productDef.LabelCap} <" : "(select product)";
+
+                if (Widgets.ButtonText(prodBtn, prodLabel))
+                {
+                    var opts = new List<FloatMenuOption>();
+                    var noneOpt = new FloatMenuOption("(none)", () =>
+                    {
+                        data.productDef = null;
+                        _buffers.Remove(id + "_prod");
+                    });
+                    if (bill.recipe?.products != null)
+                    {
+                        foreach (var product in bill.recipe.products)
+                        {
+                            var captured = product.thingDef;
+                            opts.Add(new FloatMenuOption(captured.LabelCap, () =>
+                            {
+                                data.productDef = captured;
+                                _buffers.Remove(id + "_prod");
+                            }));
+                        }
+                    }
+                    var sorted = opts.OrderBy(o => o.Label).ToList();
+                    sorted.Insert(0, noneOpt);
+                    Find.WindowStack.Add(new FloatMenu(sorted));
+                }
+
+                string prodBufKey = id + "_prod";
+                if (!_buffers.ContainsKey(prodBufKey))
+                    _buffers[prodBufKey] = data.productThreshold.ToString();
+
+                string prodBuf = _buffers[prodBufKey];
+                Widgets.TextFieldNumeric(prodField, ref data.productThreshold, ref prodBuf, 0f, 9_999_999f);
+                _buffers[prodBufKey] = prodBuf;
+
+                if (data.productDef != null && (data.productDef.IsApparel || data.productDef.IsWeapon))
+                    listing.CheckboxLabeled("Count equipped", ref data.countEquipped);
+                else
+                    data.countEquipped = false;
+            }
 
             listing.CheckboxLabeled("Suspend bill when ingredient drops below threshold", ref data.suspendOnDrop);
         }

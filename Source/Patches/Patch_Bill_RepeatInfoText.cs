@@ -15,7 +15,7 @@ namespace IngredientThreshold.Patches
                 && data.ingredient != null)
                 __result = $"{data.ingredient.LabelCap} > {data.threshold}";
             else
-                __result = "select ingredient";
+                __result = "Select Ingredient";
 
             return false;
         }
